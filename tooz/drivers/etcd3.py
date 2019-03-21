@@ -295,6 +295,24 @@ class Etcd3Driver(coordination.CoordinationDriverCachedRunWatchers,
 
         return EtcdFutureResult(self._executor.submit(_leave_group))
 
+    def get_groups(self):
+        @_translate_failures
+        def _get_groups():
+            result = list(self.client.get_prefix(self.GROUP_PREFIX))
+
+            groups = []
+            for _, metadata in result:
+                group_id = metadata.key.replace(self.GROUP_PREFIX, '')
+
+                if group_id.endswith('/'):
+                    group_id = str(group_id[:-1])
+
+                groups.append(group_id)
+
+            return groups
+
+        return EtcdFutureResult(self._executor.submit(_get_groups))
+
     def get_members(self, group_id):
         encoded_group = self._encode_group_id(group_id)
 
