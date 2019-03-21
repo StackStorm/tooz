@@ -211,6 +211,10 @@ class Etcd3Driver(coordination.CoordinationDriverWithExecutor):
         super(Etcd3Driver, self)._start()
         self._membership_lease = self.client.lease(self.membership_timeout)
 
+    def _stop(self):
+        super(Etcd3Driver, self)._start()
+        self._membership_lease.revoke()
+
     def get_lock(self, name):
         return Etcd3Lock(self, name, self.lock_timeout)
 
@@ -218,6 +222,9 @@ class Etcd3Driver(coordination.CoordinationDriverWithExecutor):
         # NOTE(jaypipes): Copying because set can mutate during iteration
         for lock in self._acquired_locks.copy():
             lock.heartbeat()
+
+        # NOTE(kami) we also need to heartbeat group member entries
+        self._membership_lease.refresh()
         return self.lock_timeout
 
     def watch_join_group(self, group_id, callback):
