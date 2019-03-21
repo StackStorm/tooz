@@ -416,8 +416,19 @@ class Etcd3Driver(coordination.CoordinationDriverWithExecutor):
     def get_groups(self):
         @_translate_failures
         def _get_groups():
-            groups = self.client.get_prefix(self.GROUP_PREFIX)
-            return [
-                group[1]['key'][len(self.GROUP_PREFIX):-1] for group in groups]
+            result = self.client.get_prefix(self.GROUP_PREFIX)
+
+            groups = []
+            for _, metadata in result:
+                group_id = metadata['key'][len(self.GROUP_PREFIX):-1]
+
+                if '/' in group_id and group_id[:-1] != '/':
+                    # This entry represents a group member, skip it
+                    continue
+
+                groups.append(group_id)
+
+            return groups
+
         return coordination.CoordinatorResult(
             self._executor.submit(_get_groups))
